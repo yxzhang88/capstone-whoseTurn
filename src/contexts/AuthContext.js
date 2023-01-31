@@ -2,37 +2,95 @@
 // this one is for setup authentication
 // able to access the current user anywhere in the application
 
-import React, { Children, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  // onAuthStateChanged,
+  updateEmail,
+  updatePassword,
+} from "firebase/auth";
 import { auth } from "../firebase";
 // auth is a module
 
-const AuthContext = React.createContext();
+const AuthContext = createContext();
 
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-export default function AuthProvider(children) {
+// export function AuthProvider({ children }) {
+//   const [currentUser, setCurrentUser] = useState();
+//   const [loading, setLoading] = useState(true);
+
+export function AuthContextProvider({ children }) {
   const [currentUser, setCurrentUser] = useState();
+  const [loading, setLoading] = useState(true);
 
   function signup(email, password) {
-    return auth.ctreateUserWithEmailAndPassword(email, password);
-    // return a promise which return when use this inside of the signup compo to
-    // to make sure that the compo is worked successfully. and if there is a
-    // failure may redirect the user to the correct page
+    return createUserWithEmailAndPassword(auth, email, password);
+  }
+
+  function login(email, password) {
+    return signInWithEmailAndPassword(auth, email, password);
+  }
+
+  function logout() {
+    return signOut(auth);
+  }
+
+  function resetPassword(email) {
+    return auth.sendPasswordResetEmail(email);
+  }
+
+  // function updateEmail(email) {
+  //   return currentUser.updateEmail(email);
+  // }
+
+  // function updatePassword(password) {
+  //   return currentUser.updatePassword(password);
+  // }
+
+  function emailChange(email) {
+    return updateEmail(currentUser, email);
+  }
+
+  function passwordChange(password) {
+    return updatePassword(currentUser, password);
   }
 
   useEffect(() => {
-    const unsubsribe = auth.onAuthStateChange((user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
+      setLoading(false);
     });
-    return unsubsribe;
+
+    return unsubscribe;
   }, []);
 
+  // const value = {
+  //   currentUser,
+  //   login,
+  //   signup,
+  //   logout,
+  //   resetPassword,
+  //   updateEmail,
+  //   updatePassword,
+  // };
   const value = {
     currentUser,
+    login,
     signup,
+    logout,
+    resetPassword,
+    emailChange,
+    passwordChange,
   };
 
-  return <AuthContext.Provider value={value}>{Children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 }
